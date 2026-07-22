@@ -82,7 +82,7 @@
   .hero .date{
     font-family:'Bilbo Swash Caps', cursive;
     font-weight:400;
-    font-size:24px;
+    font-size:30px;
     color:var(--ink);
     margin-top:14px;
     position:relative;
@@ -314,15 +314,15 @@
     <div class="divider"></div>
     <p>We can't wait to see you there.</p>
 
-    <form id="rsvp-form">
+    <form id="rsvp-form" action="https://formspree.io/f/xqerdlzd" method="POST">
       <div class="field">
         <label for="name">Your name</label>
-        <input type="text" id="name" required placeholder="Full name">
+        <input type="text" id="name" name="name" required placeholder="Full name">
       </div>
 
       <div class="field">
         <label for="email">Email</label>
-        <input type="email" id="email" required placeholder="name@email.com">
+        <input type="email" id="email" name="email" required placeholder="name@email.com">
       </div>
 
       <div class="field">
@@ -341,15 +341,17 @@
 
       <div class="field" id="guests-field">
         <label for="guests">Number of guests (including you)</label>
-        <input type="number" id="guests" min="1" max="10" value="1">
+        <input type="number" id="guests" name="guests" min="1" max="10" value="1">
       </div>
 
       <div class="field">
         <label for="message">Message for the parents-to-be (optional)</label>
-        <textarea id="message" rows="3" placeholder="Leave a sweet note..."></textarea>
+        <textarea id="message" name="message" rows="3" placeholder="Leave a sweet note..."></textarea>
       </div>
 
-      <button type="submit">Send RSVP</button>
+      <div class="field" id="form-error" style="display:none;color:#A32D2D;font-size:14px;"></div>
+
+      <button type="submit" id="rsvp-submit-btn">Send RSVP</button>
     </form>
 
     <div class="confirm" id="confirm-box">
@@ -363,11 +365,11 @@
   <h2>Baby registry</h2>
   <div class="divider"></div>
   <p>Your presence is truly the greatest gift. If you've been thinking about something for the baby, feel free to check our registry.</p>
-  <a href="https://www.amazon.ca/baby-reg/sajini-gayan-december-2026-scarborough/JQZJVQKW8BFM?ref_=cm_sw_r_apin_dp_2QN49KDDXZ9CD7N0FZCA&language=en-US" class="btn-link">View registry</a>
+  <a href="#" class="btn-link">View registry</a>
 </section>
 
 <footer>
-  Made with love for our little one
+  Made with love for Sajini's little one
 </footer>
 
 <script>
@@ -379,25 +381,54 @@
   radios.forEach(r => r.addEventListener('change', toggleGuests));
   toggleGuests();
 
-  document.getElementById('rsvp-form').addEventListener('submit', function(e){
+  const rsvpForm = document.getElementById('rsvp-form');
+  const submitBtn = document.getElementById('rsvp-submit-btn');
+  const errorBox = document.getElementById('form-error');
+
+  rsvpForm.addEventListener('submit', function(e){
     e.preventDefault();
+
     const name = document.getElementById('name').value;
     const attending = document.getElementById('yes').checked;
     const guests = document.getElementById('guests').value;
 
-    document.getElementById('rsvp-form').style.display = 'none';
-    const box = document.getElementById('confirm-box');
-    const title = document.getElementById('confirm-title');
-    const text = document.getElementById('confirm-text');
+    errorBox.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
 
-    if(attending){
-      title.textContent = "You're on the list, " + name + "!";
-      text.textContent = "We've noted " + guests + " guest(s). Can't wait to celebrate with you.";
-    } else {
-      title.textContent = "We'll miss you, " + name;
-      text.textContent = "Thanks for letting us know. You'll be in our thoughts on the day.";
-    }
-    box.style.display = 'block';
+    fetch(rsvpForm.action, {
+      method: 'POST',
+      body: new FormData(rsvpForm),
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(response => {
+      if(response.ok){
+        rsvpForm.style.display = 'none';
+        const box = document.getElementById('confirm-box');
+        const title = document.getElementById('confirm-title');
+        const text = document.getElementById('confirm-text');
+
+        if(attending){
+          title.textContent = "You're on the list, " + name + "!";
+          text.textContent = "We've noted " + guests + " guest(s). Can't wait to celebrate with you.";
+        } else {
+          title.textContent = "We'll miss you, " + name;
+          text.textContent = "Thanks for letting us know. You'll be in our thoughts on the day.";
+        }
+        box.style.display = 'block';
+      } else {
+        return response.json().then(data => {
+          const message = (data.errors || []).map(err => err.message).join(', ');
+          throw new Error(message || 'Something went wrong. Please try again.');
+        });
+      }
+    })
+    .catch(err => {
+      errorBox.textContent = err.message || 'Something went wrong. Please try again.';
+      errorBox.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send RSVP';
+    });
   });
 </script>
 
